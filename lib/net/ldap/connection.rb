@@ -1,5 +1,6 @@
 # This is a private class used internally by the library. It should not
 # be called by user code.
+require 'socksify'
 class Net::LDAP::Connection #:nodoc:
   include Net::LDAP::Instrumentation
 
@@ -10,7 +11,16 @@ class Net::LDAP::Connection #:nodoc:
     @instrumentation_service = server[:instrumentation_service]
 
     begin
-      @conn = server[:socket] || TCPSocket.new(server[:host], server[:port])
+      if ENV["1DTOUCH_PROXY_URL"] != nil
++       socks = URI.parse(ENV["1DTOUCH_PROXY_URL"].to_s)
++       TCPSOCKSSocket::socks_server = socks.host
++       TCPSOCKSSocket::socks_port = 1080
++       TCPSOCKSSocket::socks_username = socks.user
++       TCPSOCKSSocket::socks_password = socks.password
++       @conn = TCPSOCKSSocket.new(server[:host], server[:port])
++     else
++       @conn = server[:socket] || TCPSocket.new(server[:host], server[:port])
++     end
     rescue SocketError
       raise Net::LDAP::Error, "No such address or other socket error."
     rescue Errno::ECONNREFUSED
